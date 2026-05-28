@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Dashboard - Admin Panel</title>
+    <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --dark: #23272b;
+            --bg: #f4f6f9;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg); display: flex; min-height: 100vh; }
+        
+        /* Sidebar Styling */
+        .sidebar { width: 260px; background: var(--dark); color: white; padding: 2rem 1rem; }
+        .sidebar h2 { margin-bottom: 2rem; font-size: 1.4rem; text-align: center; border-bottom: 1px solid #454d55; padding-bottom: 1rem;}
+        .sidebar a { display: block; color: #c2c7d0; padding: 0.75rem 1rem; text-decoration: none; border-radius: 4px; margin-bottom: 0.5rem; font-weight: 500;}
+        .sidebar a.active, .sidebar a:hover { background: #495057; color: white; }
+        
+        /* Main Content Styling */
+        .main-content { flex: 1; padding: 2rem; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        
+        /* Dashboard Metric Summary Cards Grid */
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
+        .metric-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 5px solid #6c757d; }
+        .metric-card.total { border-left-color: var(--primary); }
+        .metric-card.regular { border-left-color: #17a2b8; }
+        .metric-card.emergency { border-left-color: var(--danger); animation: boundaryPulse 2s infinite; }
+        .metric-card.pending { border-left-color: var(--warning); }
+        
+        @keyframes boundaryPulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.2); }
+            70% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
+        .metric-card h3 { font-size: 0.9rem; text-transform: uppercase; color: #6c757d; margin-bottom: 0.5rem; }
+        .metric-card p { font-size: 1.8rem; font-weight: bold; color: #333; }
+
+        /* Data Table Container Table Elements */
+        .table-container { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .table-container h2 { margin-bottom: 1rem; font-size: 1.2rem; color: #333; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 1rem; border-bottom: 1px solid #dee2e6; font-size: 0.95rem; }
+        th { background-color: #f8f9fa; color: #495057; font-weight: 600; }
+        
+        /* Mixed Row Variations & Indicators */
+        tr.emergency-row { background-color: #fff5f5; }
+        tr.emergency-row:hover { background-color: #ffe8e8 !important; }
+        tr:hover { background-color: #f8f9fa; }
+        
+        /* Badges Styling */
+        .badge { display: inline-block; padding: 0.25rem 0.6rem; font-size: 0.8rem; font-weight: bold; border-radius: 50px; text-transform: uppercase; }
+        .badge-pending { background-color: #fff3cd; color: #856404; }
+        .badge-approved { background-color: #d4edda; color: #155724; }
+        .badge-cancelled { background-color: #f8d7da; color: #721c24; }
+        
+        .type-tag { font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 0.25rem; }
+        .tag-regular { color: #17a2b8; }
+        .tag-emergency { color: var(--danger); }
+
+        /* Action Buttons Styling */
+        .action-btn { padding: 0.35rem 0.75rem; font-size: 0.85rem; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-right: 0.25rem; transition: background 0.2s; }
+        .btn-approve { background-color: var(--success); color: white; }
+        .btn-approve:hover { background-color: #218838; }
+        .btn-cancel { background-color: var(--warning); color: #212529; }
+        .btn-cancel:hover { background-color: #e0a800; }
+        .btn-delete { background-color: var(--danger); color: white; }
+        .btn-delete:hover { background-color: #c82333; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>🏥 CareFirst Admin</h2>
+        <a href="#" class="active">📊 Dashboard Overview</a>
+        <a href="#" onclick="alert('Appointments configurations tab linked sync complete.')">📅 Appointments</a>
+        <a href="#" onclick="alert('Doctor Schedules sync active.')">👨‍⚕️ Doctors</a>
+        <a href="#" onclick="if(confirm('Wipe all local records database?')){localStorage.clear(); location.reload();}" style="margin-top: 4rem; color: #f8d7da; font-size: 0.9rem;">⚠️ Clear All Data</a>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Dashboard Overview</h1>
+            <div id="liveClock" style="color: #6c757d; font-weight: 600;">Live Mixed Control Stream</div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card total">
+                <h3>Total Requests</h3>
+                <p id="totalCount">0</p>
+            </div>
+            <div class="metric-card regular">
+                <h3>Regular Bookings</h3>
+                <p id="regularCount">0</p>
+            </div>
+            <div class="metric-card emergency">
+                <h3>🚨 Emergency Bookings</h3>
+                <p id="emergencyCount">0</p>
+            </div>
+            <div class="metric-card pending">
+                <h3>Pending Actions</h3>
+                <p id="pendingCount">0</p>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <h2>Mixed Request Stream (Regular &amp; Emergency Live Logs)</h2>
+            <table id="appointmentsTable">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Patient Details</th>
+                        <th>Preferred Schedule</th>
+                        <th>Assigned Unit</th>
+                        <th>Payment Mode</th>
+                        <th>Workflow Status</th>
+                        <th>Management Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="appointmentTableBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Setup initialization logic parameters hooks on system page wake lookups
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAppointments();
+            // Automatically synchronize local database array streams data every 5 seconds
+            setInterval(loadAppointments, 5000);
+        });
+
+        function loadAppointments() {
+            const tbody = document.getElementById('appointmentTableBody');
+            let appointments = JSON.parse(localStorage.getItem('clinic_appointments')) || [];
+            
+            // Counters tracking initialization buckets array 
+            let total = appointments.length;
+            let regularCount = 0;
+            let emergencyCount = 0;
+            let pending = 0;
+
+            // Compute counter status loop values metrics mapping across raw list payload
+            appointments.forEach(app => {
+                const type = app.type || 'Regular';
+                if (type === 'Emergency') { emergencyCount++; } else { regularCount++; }
+                if (app.status === 'Pending' || app.status === 'Priority Urgent') { pending++; }
+            });
+
+            // Sync card labels counter view metrics panels live layout text updates 
+            document.getElementById('totalCount').innerText = total;
+            document.getElementById('regularCount').innerText = regularCount;
+            document.getElementById('emergencyCount').innerText = emergencyCount;
+            document.getElementById('pendingCount').innerText = pending;
+
+            // Flush content area space before populating grid layout table array mapping
+            tbody.innerHTML = '';
+
+            if (appointments.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #6c757d; padding: 2rem;">No entries found. Book appointments in patient view panel to track updates here.</td></tr>`;
+            } else {
+                // Reverse slice values configuration map to show the newest entries at the very top of the grid stream
+                appointments.slice().reverse().forEach(app => {
+                    const tr = document.createElement('tr');
+                    
+                    const isEmergency = (app.type === 'Emergency');
+                    if (isEmergency) { tr.className = 'emergency-row'; }
+
+                    // Process category mixed indicator design markers tags 
+                    const categoryTag = isEmergency 
+                        ? `<span class="type-tag tag-emergency">🚨 Emergency</span>` 
+                        : `<span class="type-tag tag-regular">📅 Regular</span>`;
+
+                    // Parse text labels state configurations parameters properties settings variables 
+                    let statusClass = 'badge-pending';
+                    let displayStatus = app.status || 'Pending';
+                    
+                    if (displayStatus === 'Approved') statusClass = 'badge-approved';
+                    if (displayStatus === 'Cancelled') statusClass = 'badge-cancelled';
+                    if (displayStatus === 'Priority Urgent') statusClass = 'badge-pending' + ' style="background-color:#f8d7da; color:#842029;"';
+
+                    tr.innerHTML = `
+                        <td>${categoryTag}</td>
+                        <td>
+                            <strong>${app.name}</strong><br>
+                            <span style="font-size:0.85rem; color:#6c757d;">📱 ${app.phone}</span>
+                        </td>
+                        <td>
+                            <span>📆 ${app.date}</span><br>
+                            <span style="font-size:0.85rem; color:#6c757d;">⏰ ${app.time}</span>
+                        </td>
+                        <td>${app.doctor || 'Dr. Riyaz (General Medicine)'}</td>
+                        <td>
+                            <span style="font-size:0.9rem;">💳 ${app.payment || 'Unspecified'}</span><br>
+                            <span style="font-weight:bold; font-size:0.85rem; color:#495057;">${app.fee || '₹500.00'}</span>
+                        </td>
+                        <td>
+                            <span class="badge ${statusClass}">${displayStatus}</span>
+                        </td>
+                        <td>
+                            ${(displayStatus === 'Pending' || displayStatus === 'Priority Urgent') ? `
+                                <button class="action-btn btn-approve" onclick="updateStatus(${app.id}, 'Approved')">Approve</button>
+                                <button class="action-btn btn-cancel" onclick="updateStatus(${app.id}, 'Cancelled')">Cancel</button>
+                            ` : ''}
+                            <button class="action-btn btn-delete" onclick="deleteAppointment(${app.id})">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        // Action Trigger Rule Module: Set workflow tracking property flag state mappings updates
+        function updateStatus(id, newStatus) {
+            let appointments = JSON.parse(localStorage.getItem('clinic_appointments')) || [];
+            appointments = appointments.map(app => {
+                if (app.id === id) { app.status = newStatus; }
+                return app;
+            });
+            localStorage.setItem('clinic_appointments', JSON.stringify(appointments));
+            loadAppointments(); // Redraw UI immediately
+        }
+
+        // Action Trigger Rule Module: Delete item completely out of arrays mapping array stream data
+        function deleteAppointment(id) {
+            if (confirm("Are you sure you want to permanently delete this appointment entry out of the records log?")) {
+                let appointments = JSON.parse(localStorage.getItem('clinic_appointments')) || [];
+                appointments = appointments.filter(app => app.id !== id);
+                localStorage.setItem('clinic_appointments', JSON.stringify(appointments));
+                loadAppointments();
+            }
+        }
+    </script>
+</body>
+</html>
